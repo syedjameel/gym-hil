@@ -1,0 +1,100 @@
+<mujoco model="PandaUSBInsertionScene">
+    <include file="panda.xml"/>
+
+    <option timestep=".002" noslip_iterations="5" noslip_tolerance="0"/>
+
+    <statistic center="0.4 0 0.2" extent="0.8"/>
+
+    <visual>
+      <headlight diffuse=".4 .4 .4" ambient=".5 .5 .5"/>
+      <global azimuth="160" elevation="-20" offheight="128" offwidth="128"/>
+      <quality offsamples="8"/>
+    </visual>
+
+    <asset>
+      <texture type="skybox" builtin="gradient" rgb1=".3 .5 .7" rgb2="0 0 0" width="32" height="512"/>
+      <texture name="grid" type="2d" builtin="checker" width="512" height="512" rgb1=".1 .2 .3" rgb2=".2 .3 .4"/>
+      <material name="grid" texture="grid" texrepeat="2 2" texuniform="true" reflectance="0"/>
+      <material name="usb_plastic" rgba="0.15 0.15 0.15 1"/>
+      <material name="usb_metal" rgba="0.75 0.75 0.78 1"/>
+      <material name="port_housing" rgba="0.2 0.2 0.2 1"/>
+      <material name="port_inner" rgba="0.1 0.1 0.1 1"/>
+      <material name="fixture_gray" rgba="0.4 0.4 0.4 1"/>
+    </asset>
+
+    <worldbody>
+      <!-- Cameras -->
+      <camera name="front" pos="1.0 0.0 0.6" quat="0.5963678 0.3799282 0.3799282 0.5963678" fovy="45"/>
+      <light pos="0 0 3" dir="0 0 -1" diffuse="1 1 1" specular=".3 .3 .3"/>
+      <light pos="0.4 0 0.3" mode="targetbodycom" target="usb_connector" diffuse=".8 .8 .8" specular=".3 .3 .3"/>
+
+      <!-- Floor / table surface -->
+      <geom name="floor" size="3 3 0.01" type="plane" material="grid"/>
+
+      <!--
+        USB Connector (graspable, freejoint)
+        Placed within frankas workspace (approx x=0.3-0.5, y=-0.15 to 0.15)
+      -->
+      <body name="usb_connector" pos="0.49 0.0 0.085">
+        <freejoint name="usb_connector"/>
+        <geom name="usb_body" type="box" size="0.018 0.007 0.024"
+              mass="0.02" material="usb_plastic" friction="0.8 0.005 0.0001"/>
+        <!-- Metal plug (extends downward from the body along -Z) -->
+        <geom name="usb_plug" type="box" size="0.017 0.006 0.018"
+              mass="0.01" material="usb_metal" pos="0 0 -0.042"
+              friction="0.3 0.005 0.0001"/>
+        <!-- Grasp site at center of plastic body (top part) -->
+        <site name="usb_grasp" pos="0 0 0" size="0.005"/>
+      </body>
+
+      <!--
+        USB Port (fixed fixture on the table)
+        Connector inserts downward along -Z into the channel
+      -->
+      <body name="usb_port_fixture" pos="0.35 0.0 0.0">
+        <!-- Fixture block -->
+        <geom name="fixture_base" type="box" size="0.05 0.05 0.02"
+              material="fixture_gray" pos="0 0 0.02"/>
+
+        <!-- Port channel walls (deeper: 40mm to fit 36mm plug) -->
+        <geom name="port_wall_left" type="box" size="0.002 0.008 0.02"
+              pos="0.021 0 0.06" material="port_inner"
+              friction="0.5 0.005 0.0001" condim="4"
+              solimp="0.95 0.99 0.001" solref="0.004 1"/>
+        <geom name="port_wall_right" type="box" size="0.002 0.008 0.02"
+              pos="-0.021 0 0.06" material="port_inner"
+              friction="0.5 0.005 0.0001" condim="4"
+              solimp="0.95 0.99 0.001" solref="0.004 1"/>
+        <geom name="port_wall_top" type="box" size="0.019 0.002 0.02"
+              pos="0 0.008 0.06" material="port_inner"
+              friction="0.5 0.005 0.0001" condim="4"
+              solimp="0.95 0.99 0.001" solref="0.004 1"/>
+        <geom name="port_wall_bottom_wall" type="box" size="0.019 0.002 0.02"
+              pos="0 -0.008 0.06" material="port_inner"
+              friction="0.5 0.005 0.0001" condim="4"
+              solimp="0.95 0.99 0.001" solref="0.004 1"/>
+        <!-- Back wall (stops insertion at bottom of channel) -->
+        <geom name="port_back" type="box" size="0.019 0.008 0.002"
+              pos="0 0 0.04" material="port_inner"
+              solimp="0.95 0.99 0.001" solref="0.004 1"/>
+
+        <!-- Sites for reward computation -->
+        <site name="usb_port_entry" pos="0 0 0.08" size="0.005" rgba="0 1 0 0.3"/>
+        <site name="usb_port_bottom" pos="0 0 0.042" size="0.005" rgba="1 0 0 0.3"/>
+      </body>
+
+      <!-- Mocap target body for opspace controller -->
+      <body name="target" pos="0.4 0 0.3" quat="0 1 0 0" mocap="true">
+        <geom name="target" type="box" size=".03 .03 .03"
+              contype="0" conaffinity="0" rgba=".6 .3 .3 0"/>
+      </body>
+    </worldbody>
+
+    <sensor>
+      <framepos name="usb_connector_pos" objtype="site" objname="usb_grasp"/>
+      <framequat name="usb_connector_quat" objtype="body" objname="usb_connector"/>
+      <framepos name="usb_plug_pos" objtype="geom" objname="usb_plug"/>
+      <framepos name="usb_port_entry_pos" objtype="site" objname="usb_port_entry"/>
+      <framepos name="usb_port_bottom_pos" objtype="site" objname="usb_port_bottom"/>
+    </sensor>
+</mujoco>

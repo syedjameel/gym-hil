@@ -23,7 +23,7 @@ import numpy as np
 
 from gym_hil.mujoco_gym_env import MAX_GRIPPER_COMMAND
 
-DEFAULT_EE_STEP_SIZE = {"x": 0.025, "y": 0.025, "z": 0.025}
+DEFAULT_EE_STEP_SIZE = {"x": 0.005, "y": 0.005, "z": 0.005}
 
 
 class GripperPenaltyWrapper(gym.Wrapper):
@@ -234,7 +234,12 @@ class InputsControlWrapper(gym.Wrapper):
 
         # Update episode ending state if requested
         if terminate_episode:
-            logging.info(f"Episode manually ended: {'SUCCESS' if success else 'FAILURE'}")
+            if rerecord_episode:
+                logging.info("Episode manually ended: RERECORD")
+            elif success:
+                logging.info("Episode manually ended: SUCCESS")
+            else:
+                logging.info("Episode manually ended: FAILURE")
 
         if is_intervention:
             action = gamepad_action

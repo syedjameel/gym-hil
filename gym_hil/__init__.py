@@ -23,7 +23,7 @@ from gym_hil.wrappers.viewer_wrapper import PassiveViewerWrapper
 __all__ = [
     "MujocoGymEnv",
     "FrankaGymEnv",
-    "GymRenderingSpec",
+"GymRenderingSpec",
     "PassiveViewerWrapper",
     "make_env",
     "wrap_env",
@@ -120,6 +120,52 @@ register(
     max_episode_steps=100,
     kwargs={
         "env_id": "gym_hil/PandaArrangeBoxesBase-v0",
+        "use_viewer": True,
+        "gripper_penalty": -0.05,
+        "use_inputs_control": True,
+    },
+)
+
+# ── Panda USB Insertion environments ─────────────────────────────────────
+
+register(
+    id="gym_hil/PandaUSBInsertionBase-v0",
+    entry_point="gym_hil.envs:PandaUSBInsertionGymEnv",
+    max_episode_steps=200,
+    kwargs={
+        "reward_type": "sparse",
+    },
+)
+
+register(
+    id="gym_hil/PandaUSBInsertion-v0",
+    entry_point="gym_hil.wrappers.factory:make_env",
+    max_episode_steps=200,
+    kwargs={
+        "env_id": "gym_hil/PandaUSBInsertionBase-v0",
+        "use_inputs_control": False,
+        "gripper_penalty": -0.05,
+    },
+)
+
+register(
+    id="gym_hil/PandaUSBInsertionGamepad-v0",
+    entry_point="gym_hil.wrappers.factory:make_env",
+    max_episode_steps=200,
+    kwargs={
+        "env_id": "gym_hil/PandaUSBInsertionBase-v0",
+        "use_viewer": True,
+        "use_inputs_control": True,
+        "use_gamepad": True,
+    },
+)
+
+register(
+    id="gym_hil/PandaUSBInsertionKeyboard-v0",
+    entry_point="gym_hil.wrappers.factory:make_env",
+    max_episode_steps=200,
+    kwargs={
+        "env_id": "gym_hil/PandaUSBInsertionBase-v0",
         "use_viewer": True,
         "gripper_penalty": -0.05,
         "use_inputs_control": True,

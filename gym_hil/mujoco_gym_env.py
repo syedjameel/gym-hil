@@ -154,9 +154,11 @@ class FrankaGymEnv(MujocoGymEnv):
         # Setup cameras
         camera_name_1 = "front"
         camera_name_2 = "handcam_rgb"
+        camera_name_3 = "handcam_back"
         camera_id_1 = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_CAMERA, camera_name_1)
         camera_id_2 = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_CAMERA, camera_name_2)
-        self.camera_id = (camera_id_1, camera_id_2)
+        camera_id_3 = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_CAMERA, camera_name_3)
+        self.camera_id = (camera_id_1, camera_id_2, camera_id_3)
 
         # Cache robot IDs
         self._panda_dof_ids = np.asarray([self._model.joint(f"joint{i}").id for i in range(1, 8)])
@@ -199,6 +201,12 @@ class FrankaGymEnv(MujocoGymEnv):
                                 dtype=np.uint8,
                             ),
                             "wrist": spaces.Box(
+                                low=0,
+                                high=255,
+                                shape=(self._render_specs.height, self._render_specs.width, 3),
+                                dtype=np.uint8,
+                            ),
+                            "wrist_back": spaces.Box(
                                 low=0,
                                 high=255,
                                 shape=(self._render_specs.height, self._render_specs.width, 3),

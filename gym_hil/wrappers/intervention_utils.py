@@ -304,20 +304,21 @@ class GamepadController(InputController):
 
         # Get button mappings from config
         buttons = self.controller_config.get("buttons", {})
-        y_button = buttons.get("y", 3)  # Default to 3 if not found
-        a_button = buttons.get("a", 0)  # Default to 0 if not found (Logitech F310)
-        x_button = buttons.get("x", 2)  # Default to 2 if not found (Logitech F310)
+        y_button = buttons.get("y", 2)  # Default to 3 if not found
+        a_button = buttons.get("a", 1)  # Default to 0 if not found (Logitech F310)
+        x_button = buttons.get("x", 3)  # Default to 2 if not found (Logitech F310)
         lt_button = buttons.get("lt", 6)  # Default to 6 if not found
         rt_button = buttons.get("rt", 7)  # Default to 7 if not found
         rb_button = buttons.get("rb", 5)  # Default to 5 if not found
 
         for event in pygame.event.get():
             if event.type == pygame.JOYBUTTONDOWN:
-                if event.button == y_button:
+                if event.button == 2:
                     self.episode_end_status = "success"
-                elif event.button == a_button:
+                elif event.button == 1:
                     self.episode_end_status = "failure"
-                elif event.button == x_button:
+                elif event.button == 3:
+                    # print("*********************RERECORD EPISODE*************************")
                     self.episode_end_status = "rerecord_episode"
                 elif event.button == lt_button:
                     self.close_gripper_command = True
@@ -326,7 +327,7 @@ class GamepadController(InputController):
 
             # Reset episode status on button release
             elif event.type == pygame.JOYBUTTONUP:
-                if event.button in [x_button, a_button, y_button]:
+                if event.button in [3, 1, 2]:
                     self.episode_end_status = None
                 elif event.button == lt_button:
                     self.close_gripper_command = False
@@ -351,7 +352,7 @@ class GamepadController(InputController):
             # Get axis indices from config (with defaults if not found)
             left_x_axis = axes.get("left_x", 0)
             left_y_axis = axes.get("left_y", 1)
-            right_y_axis = axes.get("right_y", 3)
+            right_y_axis = axes.get("right_y", 4)
 
             # Get axis inversion settings (with defaults if not found)
             invert_left_x = axis_inversion.get("left_x", False)
@@ -361,7 +362,7 @@ class GamepadController(InputController):
             # Read joystick axes
             x_input = self.joystick.get_axis(left_x_axis)  # Left/Right
             y_input = self.joystick.get_axis(left_y_axis)  # Up/Down
-            z_input = self.joystick.get_axis(right_y_axis)  # Up/Down for Z
+            z_input = self.joystick.get_axis(4)  # Up/Down for Z
 
             # Apply deadzone to avoid drift
             x_input = 0 if abs(x_input) < self.deadzone else x_input
@@ -378,7 +379,7 @@ class GamepadController(InputController):
 
             # Calculate deltas
             delta_x = y_input * self.y_step_size  # Forward/backward
-            delta_y = x_input * self.x_step_size  # Left/right
+            delta_y = -x_input * self.x_step_size  # Left/right
             delta_z = z_input * self.z_step_size  # Up/down
 
             return delta_x, delta_y, delta_z
