@@ -2,6 +2,7 @@
 
 """Panda USB insertion task environment for mijoco simulation"""
 
+import logging
 from pathlib import Path
 from typing import Any, Dict, Literal, Tuple
 
@@ -17,6 +18,7 @@ _CARTESIAN_BOUNDS = np.asarray([[0.2, -0.3, 0], [0.6, 0.3, 0.5]])
 # Region where the USB connector can be randomly placed (near gripper home x=0.49, y=0.0)
 _USB_SAMPLING_BOUNDS = np.asarray([[0.45, -0.04], [0.53, 0.04]])
 
+TORQUE_THRESHOLD = 2.0  # N-m
 
 class PandaUSBInsertionGymEnv(FrankaGymEnv):
     """Environment for a Panda robot performing USB connector insertion.
@@ -132,7 +134,15 @@ class PandaUSBInsertionGymEnv(FrankaGymEnv):
         usb_pos = self._data.sensor("usb_connector_pos").data
         out_of_bounds = usb_pos[2] < -0.05 or np.any(np.abs(usb_pos[:2]) > 2.0)
 
-        terminated = bool(success or out_of_bounds)
+        # Check for excessive torque
+        robot_state = self.get_robot_state()
+        joint_torques = robot_state[14:21]  # 7 joint torques at indices 14-20
+        max_torque = np.max(np.abs(joint_torques))
+        torque_exceeded = max_torque > TORQUE_THRESHOLD
+        if torque_exceeded:
+            logging.warning(f"Joint torque exceeded threshold ({max_torque:.1f} > {TORQUE_THRESHOLD})")
+
+        terminated = bool(success or out_of_bounds or torque_exceeded)
 
         return obs, rew, terminated, False, {"succeed": success}
 

@@ -57,6 +57,7 @@ class MujocoGymEnv(gym.Env):
         self._random = np.random.RandomState(seed)
         self._viewer: Optional[mujoco.Renderer] = None
         self._render_specs = render_spec
+        self._initial_tcp_pos = None
 
     def render(self):
         if self._viewer is None:
@@ -166,6 +167,13 @@ class FrankaGymEnv(MujocoGymEnv):
         self._gripper_ctrl_id = self._model.actuator("fingers_actuator").id
         self._pinch_site_id = self._model.site("pinch").id
 
+        # Initialize references for relative observations (updated properly in reset_robot)
+        mujoco.mj_forward(self._model, self._data)
+        self._initial_tcp_pos = self._data.sensor("2f85/pinch_pos").data.copy()
+        self._baseline_torques = np.array(
+            [self._data.sensor(f"panda/joint{i}_torque").data[0] for i in range(1, 8)]
+        )
+
         # Setup observation and action spaces
         self._setup_observation_space()
         self._setup_action_space()
@@ -234,6 +242,12 @@ class FrankaGymEnv(MujocoGymEnv):
         # Reset mocap body to home position
         tcp_pos = self._data.sensor("2f85/pinch_pos").data
         self._data.mocap_pos[0] = tcp_pos
+        self._initial_tcp_pos = tcp_pos.copy()
+
+        # Cache baseline torques at rest for relative torque computation
+        self._baseline_torques = np.array(
+            [self._data.sensor(f"panda/joint{i}_torque").data[0] for i in range(1, 8)]
+        )
 
     def apply_action(self, action):
         """Apply the action to the robot."""
@@ -268,14 +282,17 @@ class FrankaGymEnv(MujocoGymEnv):
     def get_robot_state(self):
         """Get the current state of the robot."""
         tcp_pos = self._data.sensor("2f85/pinch_pos").data
+        tcp_pos = tcp_pos - self._initial_tcp_pos   # Make tcp pose relative instead of absolute, follow the hil-serl paper
         # tcp_quat = self._data.sensor("2f85/pinch_quat").data
         # tcp_vel = self._data.sensor("2f85/pinch_vel").data
         # tcp_angvel = self._data.sensor("2f85/pinch_angvel").data
         qpos = self.data.qpos[self._panda_dof_ids].astype(np.float32)
         qvel = self.data.qvel[self._panda_dof_ids].astype(np.float32)
+        qtor_raw = np.array([self.data.sensor(f"panda/joint{i}_torque").data[0] for i in range(1, 8)])
+        qtor = qtor_raw - self._baseline_torques  # Relative torques (excess from contacts/jams)
         gripper_pose = self.get_gripper_pose()
 
-        return np.concatenate([qpos, qvel, gripper_pose, tcp_pos])
+        return np.concatenate([qpos, qvel, qtor, gripper_pose, tcp_pos])
 
     def render(self):
         """Render the environment and return frames from multiple cameras."""
