@@ -66,9 +66,9 @@ def wrap_env(
         # Apply control wrappers last
         env = InputsControlWrapper(
             env,
-            x_step_size=1.0,
-            y_step_size=1.0,
-            z_step_size=1.0,
+            x_step_size=ee_step_size.get('x', 0.01),
+            y_step_size=ee_step_size.get('y', 0.01),
+            z_step_size=ee_step_size.get('z', 0.01),
             use_gripper=use_gripper,
             auto_reset=auto_reset,
             use_gamepad=use_gamepad,
