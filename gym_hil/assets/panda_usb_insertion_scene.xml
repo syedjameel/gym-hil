@@ -6,7 +6,7 @@
     <statistic center="0.4 0 0.2" extent="0.8"/>
 
     <visual>
-      <headlight diffuse=".4 .4 .4" ambient=".5 .5 .5"/>
+      <headlight diffuse=".5 .5 .5" ambient=".5 .5 .5"/>
       <global azimuth="160" elevation="-20" offheight="128" offwidth="128"/>
       <quality offsamples="8"/>
     </visual>
@@ -15,8 +15,8 @@
       <texture type="skybox" builtin="gradient" rgb1=".3 .5 .7" rgb2="0 0 0" width="32" height="512"/>
       <texture name="grid" type="2d" builtin="checker" width="512" height="512" rgb1=".1 .2 .3" rgb2=".2 .3 .4"/>
       <material name="grid" texture="grid" texrepeat="2 2" texuniform="true" reflectance="0"/>
-      <material name="usb_plastic" rgba="0.15 0.15 0.15 1"/>
-      <material name="usb_metal" rgba="0.75 0.75 0.78 1"/>
+      <material name="usb_plastic" rgba="0.0 0.0 0.75 1"/>
+      <material name="usb_metal" rgba="0.75 0.0 0.0 1"/>
       <material name="port_housing" rgba="0.2 0.2 0.2 1"/>
       <material name="port_inner" rgba="0.1 0.1 0.1 1"/>
       <material name="fixture_gray" rgba="0.4 0.4 0.4 1"/>
@@ -24,12 +24,19 @@
 
     <worldbody>
       <!-- Cameras -->
-      <camera name="front" pos="1.0 0.0 0.6" quat="0.5963678 0.3799282 0.3799282 0.5963678" fovy="45"/>
-      <light pos="0 0 3" dir="0 0 -1" diffuse="1 1 1" specular=".3 .3 .3"/>
-      <light pos="0.4 0 0.3" mode="targetbodycom" target="usb_connector" diffuse=".8 .8 .8" specular=".3 .3 .3"/>
+      <camera name="front" pos="0.75 0.0 0.2" quat="0.5963678 0.3799282 0.3799282 0.5963678" fovy="45"/>
+
+
+      <!-- 
+        Remove these extra lights completely, the headlight is enough, 
+        other wise, these light create shadows, this is not good for vision encoder while training 
+        -->
+      <!-- <light pos="0 0 3" dir="0 0 -1" diffuse="1 1 1" specular=".3 .3 .3"/>
+      <light pos="0.4 0 0.3" mode="targetbodycom" target="usb_connector" diffuse=".8 .8 .8" specular=".3 .3 .3"/> -->
 
       <!-- Floor / table surface -->
       <geom name="floor" size="3 3 0.01" type="plane" material="grid"/>
+      <!-- <geom name="floor" size="3 3 0.01" type="plane"/> -->
 
       <!--
         USB Connector (graspable, freejoint)
