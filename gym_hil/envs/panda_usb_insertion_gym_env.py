@@ -12,13 +12,13 @@ from gymnasium import spaces
 
 from gym_hil.mujoco_gym_env import FrankaGymEnv, GymRenderingSpec
 
-_PANDA_HOME = np.asarray((0, 0.195, 0, -2.43, 0, 2.62, 0.785))
+_PANDA_HOME = np.asarray((0.0, 0.2639, 0.0, -2.4312, 0.0, 2.6951, 0.7854))
 _CARTESIAN_BOUNDS = np.asarray([[0.2, -0.3, 0], [0.6, 0.3, 0.5]])
 
 # Region where the USB connector can be randomly placed (near gripper home x=0.49, y=0.0)
-_USB_SAMPLING_BOUNDS = np.asarray([[0.45, -0.04], [0.53, 0.04]])
+_USB_SAMPLING_BOUNDS = np.asarray([[0.49, -0.02], [0.49, 0.02]])
 
-TORQUE_THRESHOLD = 2.0  # N-m
+TORQUE_THRESHOLD = 30.0  # N-m
 
 class PandaUSBInsertionGymEnv(FrankaGymEnv):
     """Environment for a Panda robot performing USB connector insertion.
@@ -57,7 +57,7 @@ class PandaUSBInsertionGymEnv(FrankaGymEnv):
         )
 
         self._random_usb_position = random_usb_position
-        self._usb_z_init = 0.085  # USB connector body center Z (plug hangs below)
+        self._usb_z_init = 0.015  # USB body center Z (30mm tall body resting on table)
 
         # Setup observation space
         agent_dim = self.get_robot_state().shape[0]  # 18D for Franka
@@ -79,7 +79,7 @@ class PandaUSBInsertionGymEnv(FrankaGymEnv):
                                 (self._render_specs.height, self._render_specs.width, 3),
                                 dtype=np.uint8,
                             ),
-                            "wrist_back": spaces.Box(
+                            "side": spaces.Box(
                                 0, 255,
                                 (self._render_specs.height, self._render_specs.width, 3),
                                 dtype=np.uint8,
@@ -154,9 +154,9 @@ class PandaUSBInsertionGymEnv(FrankaGymEnv):
         port_entry_pos = self._data.sensor("usb_port_entry_pos").data.astype(np.float32)
 
         if self.image_obs:
-            front_view, wrist_view, wrist_back_view = self.render()
+            front_view, wrist_view, side_view = self.render()
             return {
-                "pixels": {"front": front_view, "wrist": wrist_view, "wrist_back": wrist_back_view},
+                "pixels": {"front": front_view, "wrist": wrist_view, "side": side_view},
                 "agent_pos": robot_state,
             }
         else:
@@ -181,6 +181,10 @@ class PandaUSBInsertionGymEnv(FrankaGymEnv):
         port_bottom_pos = self._data.sensor("usb_port_bottom_pos").data
 
         if self.reward_type == "dense":
+            # Snap to exactly 1.0 at full insertion so success is unambiguous.
+            if self._is_success():
+                return 1.0
+
             # step 1 approach
             dist_to_usb = np.linalg.norm(tcp_pos - usb_pos)
             r_approach = np.exp(-20 * dist_to_usb)
@@ -189,25 +193,43 @@ class PandaUSBInsertionGymEnv(FrankaGymEnv):
             usb_lifted = usb_pos[2] > self._usb_z_init + 0.01
             r_grasp = 1.0 if usb_lifted else 0.0
 
-            # Step 3 align (only if grasped)
-            dist_to_port = np.linalg.norm(usb_plug_pos - port_entry_pos)
-            r_align = np.exp(-20 * dist_to_port) if usb_lifted else 0.0
+            # Step 3 align (only if grasped) - Y/Z alignment of plug with port
+            # entry. Using only Y/Z (not full 3D) so that pushing the plug
+            # deeper into the slot does not penalize alignment.
+            yz_offset = (usb_plug_pos - port_entry_pos)[1:]
+            r_align = np.exp(-20 * np.linalg.norm(yz_offset)) if usb_lifted else 0.0
 
-            # step 4 insert
-            max_depth = port_entry_pos[2] - port_bottom_pos[2]
-            insertion_depth = max(0.0, port_entry_pos[2] - usb_plug_pos[2])
-            r_insert = np.clip(insertion_depth / max(max_depth, 1e-6), 0.0, 1.0) if usb_lifted else 0.0
+            # step 4 insert (direction-agnostic: project plug offset onto port axis)
+            port_axis = port_bottom_pos - port_entry_pos
+            port_axis_norm = np.linalg.norm(port_axis)
+            if port_axis_norm > 1e-6:
+                port_dir = port_axis / port_axis_norm
+                plug_offset = usb_plug_pos - port_entry_pos
+                insertion_depth = max(0.0, float(np.dot(plug_offset, port_dir)))
+                max_depth = float(port_axis_norm)
+            else:
+                insertion_depth = 0.0
+                max_depth = 1e-6
+            r_insert = np.clip(insertion_depth / max_depth, 0.0, 1.0) if usb_lifted else 0.0
 
             return float(0.2 * r_approach + 0.2 * r_grasp + 0.3 * r_align + 0.3 * r_insert)
         else:
             return float(self._is_success())
 
     def _is_success(self) -> bool:
-        """Check if USB is fully inserted into the port."""
-        usb_plug_pos = self._data.sensor("usb_plug_pos").data
-        port_bottom_pos = self._data.sensor("usb_port_bottom_pos").data
-        dist_to_bottom = np.linalg.norm(usb_plug_pos - port_bottom_pos)
-        return dist_to_bottom < 0.01
+        """Check if USB is fully inserted into the port.
+
+        Uses X-axis insertion depth only (not full 3D distance) so that small
+        Y/Z drift inside the slot - which is allowed by the slot tolerances
+        and doesn't affect the actual insertion - doesn't block success.
+
+        3 mm X tolerance leaves room for MuJoCo contact compliance (~0.5-1 mm
+        of slop at each contact) while still requiring the plug to be
+        essentially bottomed against the back wall.
+        """
+        plug_x = self._data.sensor("usb_plug_pos").data[0]
+        bottom_x = self._data.sensor("usb_port_bottom_pos").data[0]
+        return abs(plug_x - bottom_x) < 0.003
 
 
 if __name__ == "__main__":

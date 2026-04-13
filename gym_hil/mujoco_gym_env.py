@@ -155,7 +155,7 @@ class FrankaGymEnv(MujocoGymEnv):
         # Setup cameras
         camera_name_1 = "front"
         camera_name_2 = "handcam_rgb"
-        camera_name_3 = "handcam_back"
+        camera_name_3 = "side"
         camera_id_1 = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_CAMERA, camera_name_1)
         camera_id_2 = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_CAMERA, camera_name_2)
         camera_id_3 = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_CAMERA, camera_name_3)
@@ -214,7 +214,7 @@ class FrankaGymEnv(MujocoGymEnv):
                                 shape=(self._render_specs.height, self._render_specs.width, 3),
                                 dtype=np.uint8,
                             ),
-                            "wrist_back": spaces.Box(
+                            "side": spaces.Box(
                                 low=0,
                                 high=255,
                                 shape=(self._render_specs.height, self._render_specs.width, 3),

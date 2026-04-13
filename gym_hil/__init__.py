@@ -131,7 +131,7 @@ register(
 register(
     id="gym_hil/PandaUSBInsertionBase-v0",
     entry_point="gym_hil.envs:PandaUSBInsertionGymEnv",
-    max_episode_steps=200,
+    max_episode_steps=140,
     kwargs={
         "reward_type": "sparse",
     },
@@ -140,7 +140,7 @@ register(
 register(
     id="gym_hil/PandaUSBInsertion-v0",
     entry_point="gym_hil.wrappers.factory:make_env",
-    max_episode_steps=200,
+    max_episode_steps=140,
     kwargs={
         "env_id": "gym_hil/PandaUSBInsertionBase-v0",
         "use_inputs_control": False,
@@ -151,7 +151,7 @@ register(
 register(
     id="gym_hil/PandaUSBInsertionGamepad-v0",
     entry_point="gym_hil.wrappers.factory:make_env",
-    max_episode_steps=200,
+    max_episode_steps=140,
     kwargs={
         "env_id": "gym_hil/PandaUSBInsertionBase-v0",
         "use_viewer": True,
@@ -163,7 +163,7 @@ register(
 register(
     id="gym_hil/PandaUSBInsertionKeyboard-v0",
     entry_point="gym_hil.wrappers.factory:make_env",
-    max_episode_steps=200,
+    max_episode_steps=140,
     kwargs={
         "env_id": "gym_hil/PandaUSBInsertionBase-v0",
         "use_viewer": True,

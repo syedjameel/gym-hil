@@ -38,7 +38,7 @@ class PandaPickCubeGymEnv(FrankaGymEnv):
         render_spec: GymRenderingSpec = GymRenderingSpec(),  # noqa: B008
         render_mode: Literal["rgb_array", "human"] = "rgb_array",
         image_obs: bool = False,
-        reward_type: str = "sparse",
+        reward_type: str = "dense",
         random_block_position: bool = False,
     ):
         self.reward_type = reward_type
@@ -160,7 +160,7 @@ class PandaPickCubeGymEnv(FrankaGymEnv):
 
         if self.image_obs:
             # Image observations
-            front_view, wrist_view = self.render()
+            front_view, wrist_view, side_view = self.render()
             observation = {
                 "pixels": {"front": front_view, "wrist": wrist_view},
                 "agent_pos": robot_state,
