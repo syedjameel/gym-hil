@@ -15,10 +15,10 @@ from gym_hil.mujoco_gym_env import FrankaGymEnv, GymRenderingSpec
 _PANDA_HOME = np.asarray((0.0, 0.2639, 0.0, -2.4312, 0.0, 2.6951, 0.7854))
 _CARTESIAN_BOUNDS = np.asarray([[0.2, -0.3, 0], [0.6, 0.3, 0.5]])
 
-# Region where the USB connector can be randomly placed (near gripper home x=0.49, y=0.0)
-_USB_SAMPLING_BOUNDS = np.asarray([[0.49, -0.02], [0.49, 0.02]])
+# Region where the USB connector can be randomly placed (near gripper home x=0.52, y=0.0)
+_USB_SAMPLING_BOUNDS = np.asarray([[0.52, -0.01], [0.52, 0.01]])
 
-TORQUE_THRESHOLD = 30.0  # N-m
+TORQUE_THRESHOLD = 2.0  # N-m
 
 class PandaUSBInsertionGymEnv(FrankaGymEnv):
     """Environment for a Panda robot performing USB connector insertion.
@@ -57,7 +57,9 @@ class PandaUSBInsertionGymEnv(FrankaGymEnv):
         )
 
         self._random_usb_position = random_usb_position
-        self._usb_z_init = 0.015  # USB body center Z (30mm tall body resting on table)
+        # Connector body origin is at the plug tip; overmold bottom at local z=-0.004
+        # rests on the table top at world z=0.04 -> body z = 0.044.
+        self._usb_z_init = 0.044
 
         # Setup observation space
         agent_dim = self.get_robot_state().shape[0]  # 18D for Franka
@@ -139,6 +141,7 @@ class PandaUSBInsertionGymEnv(FrankaGymEnv):
         joint_torques = robot_state[14:21]  # 7 joint torques at indices 14-20
         max_torque = np.max(np.abs(joint_torques))
         torque_exceeded = max_torque > TORQUE_THRESHOLD
+        print("Max torque: ", max_torque)
         if torque_exceeded:
             logging.warning(f"Joint torque exceeded threshold ({max_torque:.1f} > {TORQUE_THRESHOLD})")
 
@@ -174,7 +177,7 @@ class PandaUSBInsertionGymEnv(FrankaGymEnv):
         3. Align: bring the USB plug close to the port entry
         4. Insert: push the plug into the port channel
         """
-        tcp_pos = self._data.sensor("2f85/pinch_pos").data
+        tcp_pos = self._data.sensor("hande/tcp_pos").data
         usb_pos = self._data.sensor("usb_connector_pos").data
         usb_plug_pos = self._data.sensor("usb_plug_pos").data
         port_entry_pos = self._data.sensor("usb_port_entry_pos").data

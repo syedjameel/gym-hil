@@ -179,7 +179,7 @@ class PandaPickCubeGymEnv(FrankaGymEnv):
         block_pos = self._data.sensor("block_pos").data
 
         if self.reward_type == "dense":
-            tcp_pos = self._data.sensor("2f85/pinch_pos").data
+            tcp_pos = self._data.sensor("hande/tcp_pos").data
             dist = np.linalg.norm(block_pos - tcp_pos)
             r_close = np.exp(-20 * dist)
             r_lift = (block_pos[2] - self._z_init) / (self._z_success - self._z_init)
@@ -192,7 +192,7 @@ class PandaPickCubeGymEnv(FrankaGymEnv):
     def _is_success(self) -> bool:
         """Check if the task is successfully completed."""
         block_pos = self._data.sensor("block_pos").data
-        tcp_pos = self._data.sensor("2f85/pinch_pos").data
+        tcp_pos = self._data.sensor("hande/tcp_pos").data
         dist = np.linalg.norm(block_pos - tcp_pos)
         lift = block_pos[2] - self._z_init
         return dist < 0.05 and lift > 0.1

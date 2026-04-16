@@ -165,11 +165,11 @@ class FrankaGymEnv(MujocoGymEnv):
         self._panda_dof_ids = np.asarray([self._model.joint(f"joint{i}").id for i in range(1, 8)])
         self._panda_ctrl_ids = np.asarray([self._model.actuator(f"actuator{i}").id for i in range(1, 8)])
         self._gripper_ctrl_id = self._model.actuator("fingers_actuator").id
-        self._pinch_site_id = self._model.site("pinch").id
+        self._tcp_site_id = self._model.site("tcp").id
 
         # Initialize references for relative observations (updated properly in reset_robot)
         mujoco.mj_forward(self._model, self._data)
-        self._initial_tcp_pos = self._data.sensor("2f85/pinch_pos").data.copy()
+        self._initial_tcp_pos = self._data.sensor("hande/tcp_pos").data.copy()
         self._baseline_torques = np.array(
             [self._data.sensor(f"panda/joint{i}_torque").data[0] for i in range(1, 8)]
         )
@@ -239,9 +239,11 @@ class FrankaGymEnv(MujocoGymEnv):
         self._data.ctrl[self._panda_ctrl_ids] = 0.0
         mujoco.mj_forward(self._model, self._data)
 
-        # Reset mocap body to home position
-        tcp_pos = self._data.sensor("2f85/pinch_pos").data
+        # Reset mocap body to match actual TCP pose at home position
+        tcp_pos = self._data.sensor("hande/tcp_pos").data
+        tcp_quat = self._data.sensor("hande/tcp_quat").data
         self._data.mocap_pos[0] = tcp_pos
+        self._data.mocap_quat[0] = tcp_quat
         self._initial_tcp_pos = tcp_pos.copy()
 
         # Cache baseline torques at rest for relative torque computation
@@ -269,7 +271,7 @@ class FrankaGymEnv(MujocoGymEnv):
             tau = opspace(
                 model=self._model,
                 data=self._data,
-                site_id=self._pinch_site_id,
+                site_id=self._tcp_site_id,
                 dof_ids=self._panda_dof_ids,
                 pos=self._data.mocap_pos[0],
                 ori=self._data.mocap_quat[0],
@@ -281,11 +283,11 @@ class FrankaGymEnv(MujocoGymEnv):
 
     def get_robot_state(self):
         """Get the current state of the robot."""
-        tcp_pos = self._data.sensor("2f85/pinch_pos").data
+        tcp_pos = self._data.sensor("hande/tcp_pos").data
         tcp_pos = tcp_pos - self._initial_tcp_pos   # Make tcp pose relative instead of absolute, follow the hil-serl paper
-        # tcp_quat = self._data.sensor("2f85/pinch_quat").data
-        # tcp_vel = self._data.sensor("2f85/pinch_vel").data
-        # tcp_angvel = self._data.sensor("2f85/pinch_angvel").data
+        # tcp_quat = self._data.sensor("hande/tcp_quat").data
+        # tcp_vel = self._data.sensor("hande/tcp_vel").data
+        # tcp_angvel = self._data.sensor("hande/tcp_angvel").data
         qpos = self.data.qpos[self._panda_dof_ids].astype(np.float32)
         qvel = self.data.qvel[self._panda_dof_ids].astype(np.float32)
         qtor_raw = np.array([self.data.sensor(f"panda/joint{i}_torque").data[0] for i in range(1, 8)])
