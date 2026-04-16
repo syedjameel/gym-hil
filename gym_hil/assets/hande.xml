@@ -1,0 +1,106 @@
+<mujoco model="robotiq_hande">
+    <compiler angle="radian" meshdir="assets" autolimits="true" />
+
+    <option integrator="implicitfast" impratio="10" cone="elliptic">
+        <flag multiccd="enable" nativeccd="enable" />
+    </option>
+
+    <asset>
+        <mesh name="hande" file="hande.stl" />
+        <mesh name="hande_collision" file="hande-collision.stl" />
+        <mesh name="coupler" file="coupler.stl" />
+        <mesh name="right_finger" file="finger_1.stl" />
+        <mesh name="left_finger" file="finger_2.stl" />
+        <mesh name="right_finger_collision" file="finger_1-collision.stl" />
+        <mesh name="left_finger_collision" file="finger_2-collision.stl" />
+
+        <material name="gray" rgba="0.4 0.4 0.4 1" />
+        <material name="dark_gray" rgba="0.1 0.1 0.1 1" />
+    </asset>
+
+    <default>
+        <default class="hande">
+            <joint damping="1" armature="0.01" />
+            <general dyntype="none" biastype="affine" ctrlrange="0 255" forcerange="-1000 1000" />
+
+            <default class="finger">
+                <joint type="slide" damping="5" armature="0.005" range="0 0.025"
+                    solimplimit="0.95 0.99 0.001" solreflimit="0.005 1" />
+            </default>
+
+            <default class="visual">
+                <geom type="mesh" contype="0" conaffinity="0" group="2" />
+            </default>
+
+            <default class="collision">
+                <geom type="mesh" group="3" solimp="0.95 0.99 0.001" solref="0.004 1"
+                    friction="0.7 0.2 0.001" />
+                <default class="pad">
+                    <geom type="box" mass="0" group="3" condim="4" priority="1"
+                        solimp="0.95 0.99 0.001" solref="0.004 1" friction="1 0.3 0.001" />
+                </default>
+            </default>
+        </default>
+    </default>
+
+    <worldbody>
+        <body name="hande" pos="0 0 0" childclass="hande">
+            <geom mesh="coupler" class="visual" material="dark_gray" />
+            <geom mesh="hande" class="visual" material="dark_gray" />
+            <geom mesh="hande_collision" class="collision" />
+
+            <body name="hande_left_finger" pos="0 0 0.099">
+                <inertial pos="0.02262 -0.00759 0.00738"
+                    quat="0.871952 0.0369732 -0.211073 0.440205"
+                    mass="0.03804" diaginertia="1.22763e-05 1.22763e-05 1.22763e-05" />
+                <joint name="hande_left_finger_joint" axis="1 0 0" class="finger" />
+                <geom mesh="left_finger" class="visual" material="gray" />
+                <!-- <geom mesh="left_finger_collision" class="collision" /> -->
+
+                <geom class="pad" pos="-0.028 0 0.037" size="0.003 0.01 0.01" />
+                <geom class="pad" pos="-0.0306 0 0.0232" euler="0 0.52 0" size="0.003 0.01 0.006" />
+                <geom class="pad" pos="-0.033 0 0.008" size="0.003 0.01 0.012" />
+            </body>
+
+            <body name="hande_right_finger" pos="0 0 0.099">
+                <inertial pos="-0.02262 0.00759 0.00738"
+                    quat="0.871952 -0.0369732 0.211073 0.440205"
+                    mass="0.03804" diaginertia="1.22763e-05 1.22763e-05 1.22763e-05" />
+                <joint name="hande_right_finger_joint" axis="-1 0 0" class="finger" />
+                <geom mesh="right_finger" class="visual" material="gray" />
+                <!-- <geom mesh="right_finger_collision" class="collision" /> -->
+
+                <geom class="pad" pos="0.028 0 0.037" size="0.003 0.01 0.01" />
+                <geom class="pad" pos="0.0306 0 0.0232" euler="0 -0.52 0" size="0.003 0.01 0.006" />
+                <geom class="pad" pos="0.033 0 0.008" size="0.003 0.01 0.012" />
+            </body>
+
+            <site name="tcp" pos="0 0 0.135" group="3" />
+        </body>
+    </worldbody>
+
+    <contact>
+        <exclude body1="hande" body2="hande_left_finger" />
+        <exclude body1="hande" body2="hande_right_finger" />
+    </contact>
+
+    <tendon>
+        <fixed name="split">
+            <joint joint="hande_left_finger_joint" coef="0.5" />
+            <joint joint="hande_right_finger_joint" coef="0.5" />
+        </fixed>
+    </tendon>
+
+    <equality>
+        <joint joint1="hande_right_finger_joint" joint2="hande_left_finger_joint"
+            polycoef="0 1 0 0 0"
+            solimp="0.95 0.99 0.001" solref="0.005 1" />
+    </equality>
+
+    <actuator>
+        <!-- Remap ctrlrange (0, 0.025) to (0, 255): 0.025 * 5000 / 255 = 0.490196 -->
+        <general class="hande" name="fingers_actuator" tendon="split" forcerange="-1000 1000"
+            ctrlrange="0 255"
+            gainprm="0.490196 0 0" biasprm="0 -5000 -500" />
+    </actuator>
+</mujoco>
