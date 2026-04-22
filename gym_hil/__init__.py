@@ -157,6 +157,7 @@ register(
         "use_viewer": True,
         "use_inputs_control": True,
         "use_gamepad": True,
+        "gripper_penalty": -0.05,
     },
 )
 

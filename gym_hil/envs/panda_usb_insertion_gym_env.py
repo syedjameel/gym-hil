@@ -222,17 +222,28 @@ class PandaUSBInsertionGymEnv(FrankaGymEnv):
     def _is_success(self) -> bool:
         """Check if USB is fully inserted into the port.
 
-        Uses X-axis insertion depth only (not full 3D distance) so that small
-        Y/Z drift inside the slot - which is allowed by the slot tolerances
-        and doesn't affect the actual insertion - doesn't block success.
+        Requires the plug center to sit inside a 3d Bounding box around the
+        port-bottom site, not just aligned on X. Checking only X was a bug:
+        moving the plug below or beside the port at the right X coordinate
+        would falsely trigger success
 
-        3 mm X tolerance leaves room for MuJoCo contact compliance (~0.5-1 mm
-        of slop at each contact) while still requiring the plug to be
-        essentially bottomed against the back wall.
+        Tolerances (these tolerances are doesnt matter much (since collision will taken care in mujoco), 
+        its only for avoiding false positives):
+        - X (depth): 3mm
+        - Y (sideways): 5mm
+        - Z (below/above): 5mm
         """
-        plug_x = self._data.sensor("usb_plug_pos").data[0]
-        bottom_x = self._data.sensor("usb_port_bottom_pos").data[0]
-        return abs(plug_x - bottom_x) < 0.003
+        # plug_x = self._data.sensor("usb_plug_pos").data[0]
+        # bottom_x = self._data.sensor("usb_port_bottom_pos").data[0]
+        # return abs(plug_x - bottom_x) < 0.003
+
+        plug = self._data.sensor("usb_plug_pos").data
+        bottom = self._data.sensor("usb_port_bottom_pos").data
+
+        dx = abs(plug[0] - bottom[0])
+        dy = abs(plug[1] - bottom[1])
+        dz = abs(plug[2] - bottom[2])
+        return dx < 0.003 and dy < 0.005 and dz < 0.005
 
 
 if __name__ == "__main__":
